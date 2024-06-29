@@ -1,0 +1,14 @@
+{
+    "nof_tps": {
+        "LONG": 0,
+        "SHORT": 0
+    },
+    "breakeven": {
+        "LONG": null,
+        "SHORT": null
+    },
+    "order_qty_base": {
+        "LONG": 0.08,
+        "SHORT": 0.08
+    }
+}

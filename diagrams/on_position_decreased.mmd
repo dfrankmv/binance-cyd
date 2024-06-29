@@ -11,26 +11,29 @@ BIN ->>+ OLS: Send 'order'
 OLS ->>  BIN: Ask 'position[ order.pair ]'
 BIN ->>  OLS: Send 'position[ order.pair ]'
 OLS ->>  OLS: Set 'type'
-OLS ->>- STG: Send {'type', 'order', 'position[ order.pair ]'}
+OLS ->>- STG: Send '{type, order, position[ order.pair ]}'
 alt 
-   Note over STG: 'type' == DECREASE_ORDER_FILLED
+   Note over STG: type == DECREASE_ORDER_FILLED
    alt 
-      Note over STG: this.pair == order.pair <br> and <br> this.dir == order.dir <br> and <br> position[ order.pair ][ order.dir ].qty == 0
-      STG ->> BIN: Cancel pending_orders[ this.pair ][ this.dir ]
+      Note over STG: this.pair == order.pair <br> and <br> position[ order.pair ][ order.dir ].qty == 0
+      STG ->> BIN: Cancel pending_orders[ this.pair ][ order.dir ]
+      activate STG
       STG ->> BIN: Ask pending_orders[ this.pair ]
       BIN ->> STG: Send pending_orders[ this.pair ]
-      STG ->> STG: Remove 'breakeven'<br/>nof_tps := 0 <br /> Reset 'order_qty_base'
+      STG ->> STG: Remove 'breakeven[ order.dir ]'<br/>nof_tps[ order.dir ] := 0 <br /> Reset 'order_qty_base[ order.dir ]'
       alt
-         Note over STG: If len(pending_orders[ this.pair ][ ! this.dir ]) == 0
-         STG ->> FIN: Post reverse_trailing_order[ this.pair ][ this.dir ]
+         Note over STG: If len(pending_orders[ this.pair ][ ! order.dir ]) == 0
+         STG ->> FIN: Post reverse_trailing_order[ this.pair ][ order.dir ]
+         deactivate STG
       end
    else
-      Note over STG: this.pair == order.pair <br> and <br> this.dir == order.dir <br> and <br> position[ order.pair ][ order.dir ].qty != 0
-      STG ->> STG: Update 'breakeven' <br> ++nof_tps
+      Note over STG: this.pair == order.pair <br> and <br> position[ order.pair ][ order.dir ].qty != 0
+      activate STG
+      STG ->> STG: Update 'breakeven[ order.dir ]' <br> ++nof_tps[ order.dir ]
       alt 
-         Note over STG: nof_tps % N == 0
-         STG ->> STG: order_qty_base := 2*position[ this.pair ][ this.dir ].qty
+         Note over STG: nof_tps[ order.dir ] % N == 0
+         STG ->> STG: order_qty_base[ order.dir ] := 2*position[ this.pair ][ this.dir ].qty
+         deactivate STG
       end
-
    end
 end

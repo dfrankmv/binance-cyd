@@ -5,7 +5,7 @@ title ON POSITION INCREASED
 participant BIN as Binance
 participant FIN as Finandy
 participant STG as Strategy
-participant OLS as Order Listener (GLOBAL)
+participant OLS as Order Listener
 
 BIN ->>+ OLS: Send 'order'
 OLS ->>  BIN: Ask 'position[ order.pair ]'
@@ -15,26 +15,24 @@ OLS ->>- STG: Send {'type', 'order', 'position[ order.pair ]'}
 alt 
     Note over STG: type == "INCREASE_ORDER_FILLED"
     alt
-        Note over STG: this.dir == order.dir <br> and <br> this.pair == order.pair
-        STG ->> BIN: Post tp_order[ this.pair ][ this.dir ]
-        STG ->> FIN: Post reverse_trailing_order[ this.pair ][ ! this.dir ]
-        STG ->> STG: Update 'breakeven'
-    end
-    alt
-        Note over STG: this.dir == order.dir <br> and <br> this.pair != order.pair
+        Note over STG: this.pair == order.pair
+        STG ->> BIN: Post tp_order[ this.pair ][ order.dir ]
+        STG ->> FIN: Post reverse_trailing_order[ this.pair ][ ! order.dir ]
+        STG ->> STG: Update 'breakeven[ order.dir ]'
+    else
+        Note over STG: this.pair != order.pair <br> and <br> position[ order.pair ][ order.dir ] == 2*order.qty 
         STG ->> BIN: Ask 'position[ this.pair ]'
         BIN ->> STG: Send 'position[ this.pair ]'
-        STG ->> STG: Update 'breakeven'
+        STG ->> STG: Update 'breakeven[ order.dir ]'
         alt
-            Note over STG: position[ this.pair ][ this.dir ].qty == 0
+            Note over STG: position[ this.pair ][ order.dir ].qty == 0
             STG ->> BIN: Ask 'pending_orders[ this.pair ]'
             BIN ->> STG: Send 'pending_orders[ this.pair ]'
             alt
-                Note over STG: len( pending_orders[ this.pair ][ this.dir ] ) > 0
-                STG ->> BIN: Cancel pending_orders[ this.pair ][ this.dir ]
-
+                Note over STG: len( pending_orders[ this.pair ][ order.dir ] ) > 0
+                STG ->> BIN: Cancel pending_orders[ this.pair ][ order.dir ]
+                STG ->> FIN: Post reverse_trailing_order[ this.pair ][ order.dir ]
             end
-            STG ->> FIN: Post reverse_trailing_order[ this.pair ][ this.dir ]
         end
     end 
 end
