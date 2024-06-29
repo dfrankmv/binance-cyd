@@ -1,0 +1,36 @@
+sequenceDiagram
+
+title ON POSITION DECREASED
+   
+participant BIN as Binance
+participant FIN as Finandy
+participant STG as Strategy
+participant OLS as Order Listener
+   
+BIN ->>+ OLS: Send 'order'
+OLS ->>  BIN: Ask 'position[ order.pair ]'
+BIN ->>  OLS: Send 'position[ order.pair ]'
+OLS ->>  OLS: Set 'type'
+OLS ->>- STG: Send {'type', 'order', 'position[ order.pair ]'}
+alt 
+   Note over STG: 'type' == DECREASE_ORDER_FILLED
+   alt 
+      Note over STG: this.pair == order.pair <br> and <br> this.dir == order.dir <br> and <br> position[ order.pair ][ order.dir ].qty == 0
+      STG ->> BIN: Cancel pending_orders[ this.pair ][ this.dir ]
+      STG ->> BIN: Ask pending_orders[ this.pair ]
+      BIN ->> STG: Send pending_orders[ this.pair ]
+      STG ->> STG: Remove 'breakeven'<br/>nof_tps := 0 <br /> Reset 'order_qty_base'
+      alt
+         Note over STG: If len(pending_orders[ this.pair ][ ! this.dir ]) == 0
+         STG ->> FIN: Post reverse_trailing_order[ this.pair ][ this.dir ]
+      end
+   else
+      Note over STG: this.pair == order.pair <br> and <br> this.dir == order.dir <br> and <br> position[ order.pair ][ order.dir ].qty != 0
+      STG ->> STG: Update 'breakeven' <br> ++nof_tps
+      alt 
+         Note over STG: nof_tps % N == 0
+         STG ->> STG: order_qty_base := 2*position[ this.pair ][ this.dir ].qty
+      end
+
+   end
+end
